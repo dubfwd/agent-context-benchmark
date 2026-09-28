@@ -99,9 +99,12 @@ else is collected automatically.
 
 ## Roadmap
 
-- **Round 3 (planned):** end-to-end agent-task metric (same task with/without each tool's
-  context wired into an agent; tokens + wall time + correctness). Round 2's field data
-  (real tasks, corpora) feeds its task-suite design.
+- **Round 3 (first pass complete, 2026-09-28):** **full-surface verification mission** — the
+  workspace's actual backlog is a whole-product re-verification (4 acquirer APIs, Medusa
+  backend contract, plugin + POS app contracts) executed with the tools in the loop; results
+  and operational metrics in [`results/2026-09-28/ROUND3.md`](results/2026-09-28/ROUND3.md).
+  The remaining controlled piece (same task with/without tool context wired into an agent;
+  tokens + correctness) stays open, with the Round 3 mission as its task template.
 - **New targets:** `@voolulabs/medusajs-plugin-pos-payments` joins the matrix when the repo
   exists (Fase 1 of the product plan); the Medusa source corpus gets the full multi-round
   protocol (Round 2 was a single-pair field test).
