@@ -2,7 +2,8 @@
 
 The controlled piece of Round 3: the verification mission of [ROUND3.md](ROUND3.md) scoped to
 one bounded task — **10 questions about the Medusa payment contract, answered from the source
-clone** — executed by identical agents under two conditions:
+clone** — executed by identical agents under three conditions (the third arm, CodeGraph, was
+added later the same day — see "Arm C" below):
 
 - **Arm A (baseline)**: grep/rg + direct file reads only.
 - **Arm B (treatment)**: same, **plus** the pre-built Graft index on the clone (`graft grep`).
@@ -67,6 +68,37 @@ no graft usage; treatment runs used `graft grep` first).
 All four runs hit every point; notable divergences: A1 hedged slightly on Q9 ("indiretamente")
 but concluded correctly; B1 uniquely cited the CHANGELOG for the `provider_id` parameter
 history on Q5 (correct and richer).
+
+## Arm C — CodeGraph (same protocol, added later the same day)
+
+The CodeGraph index had to be rebuilt first (deleted after Round 2): **25.6 s indexing, 113 MB,
+914 MB peak RSS** — the first-day cost this run set pays and the graft run set had inherited
+away. Baseline arm A is reused from the graft experiment (same task, minutes earlier, identical
+conditions).
+
+| run | arm | tokens | tool uses | wall (s) | score /10 | notes |
+|---|---|---|---|---|---|---|
+| C1 | codegraph | 490,015 | 44 | 203 | **10** | 1 codegraph query, then grep |
+| C2 | codegraph | 445,103 | 46 | 221 | **10** | 1 codegraph query, then grep |
+| **median** | **C** | **467,559** | 45 | **212** | 10 | |
+
+Three-arm consolidation (medians):
+
+| arm | tokens | wall (s) | score /10 |
+|---|---|---|---|
+| A — grep only | 340,180 | 178.5 | 10 |
+| B — + graft | 432,360 (+27%) | 333 (+87%) | 10 |
+| C — + codegraph | 467,559 (+37%) | 212 (+19%) | 10 |
+
+- **Both treatments used the graph tool exactly once** (the class lookup) and fell back to grep
+  for everything else — given "can combine" in the prompt, the tools self-select into their one
+  good use case and still don't pay for themselves on this task.
+- Correctness is a **three-way tie**. CodeGraph's Round 2 weaknesses (73% parse failure,
+  method-level lookup miss) never had the chance to bite — grep covered the method-level
+  questions.
+- Token ordering (grep < graft < codegraph) tracks each tool's per-call output weight; the wall
+  ordering inverts because graft's run set contains a 433 s outlier (within-arm spread is large
+  at n=2 — the token column is the robust one).
 
 ## Limits
 

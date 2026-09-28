@@ -102,8 +102,9 @@ else is collected automatically.
 - **Round 3 (complete, 2026-09-28):** **full-surface verification mission** — the workspace's
   actual backlog executed with the tools in the loop
   ([ROUND3.md](results/2026-09-28/ROUND3.md)), **plus the controlled piece**: same task with vs.
-  without the graph tool, 2 runs per arm — correctness tie (10/10 both arms), graft arm median
-  **+27% tokens / +87% wall** on a grep-friendly verification task
+  without a graph tool, 2 runs per arm, three arms (grep-only baseline, +Graft, +CodeGraph) —
+  **correctness three-way tie (10/10)**; both tool arms cost more tokens (+27% and +37% median);
+  each treatment used the tool exactly once and fell back to grep
   ([ROUND3-controlled.md](results/2026-09-28/ROUND3-controlled.md)).
 - **New targets:** `@voolulabs/medusajs-plugin-pos-payments` joins the matrix when the repo
   exists (Fase 1 of the product plan); the Medusa source corpus gets the full multi-round
