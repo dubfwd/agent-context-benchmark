@@ -1,0 +1,43 @@
+{
+  "date_utc": "2026-09-28T17:24:54+00:00",
+  "repo": "/Users/macbookpro/Desktop/pos/store-b2c-boilerplate",
+  "repo_name": "store-b2c-boilerplate",
+  "tool": "graft",
+  "tool_version": "0.20.0",
+  "node": "v22.12.0",
+  "rounds": 5,
+  "git_head": "",
+  "git_dirty_files": 0,
+  "df_free_kb_start": 4772008,
+  "telemetry": "off (graft telemetry disable / codegraph telemetry off, set once per machine)",
+  "df_free_kb_end": 4769892,
+  "queries": [
+    {
+      "query": "stripe payment provider module",
+      "latency_s": [
+        2.066,
+        2.099,
+        1.983
+      ],
+      "median_s": 2.066
+    },
+    {
+      "query": "storefront cart provider",
+      "latency_s": [
+        1.903,
+        1.968,
+        2.024
+      ],
+      "median_s": 1.968
+    },
+    {
+      "query": "medusa config plugins",
+      "latency_s": [
+        1.967,
+        2.731,
+        2.274
+      ],
+      "median_s": 2.274
+    }
+  ]
+}

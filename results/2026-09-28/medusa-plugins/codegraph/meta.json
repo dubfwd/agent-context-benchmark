@@ -1,0 +1,43 @@
+{
+  "date_utc": "2026-09-28T17:23:47+00:00",
+  "repo": "/Users/macbookpro/Desktop/pos/medusa-plugins",
+  "repo_name": "medusa-plugins",
+  "tool": "codegraph",
+  "tool_version": "1.6.0",
+  "node": "v22.12.0",
+  "rounds": 5,
+  "git_head": "",
+  "git_dirty_files": 0,
+  "df_free_kb_start": 4772880,
+  "telemetry": "off (graft telemetry disable / codegraph telemetry off, set once per machine)",
+  "df_free_kb_end": 4772276,
+  "queries": [
+    {
+      "query": "pos health route",
+      "latency_s": [
+        1.759,
+        1.97,
+        1.736
+      ],
+      "median_s": 1.759
+    },
+    {
+      "query": "product by barcode",
+      "latency_s": [
+        1.607,
+        1.878,
+        1.978
+      ],
+      "median_s": 1.878
+    },
+    {
+      "query": "authenticate middleware",
+      "latency_s": [
+        1.763,
+        1.556,
+        1.307
+      ],
+      "median_s": 1.556
+    }
+  ]
+}

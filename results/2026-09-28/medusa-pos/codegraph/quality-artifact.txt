@@ -1,0 +1,564 @@
+ identical to what the Read tool returns. It is NOT a summary, outline, or stale cache. Treat each block as a Read you have already performed: do not Read a file shown here.
+
+**`src/components/checkout/payment-dialog/hooks.ts`** — playErrorSound(calls), t(calls), handleErrorToast(calls), safeStringify(calls), queryClient(calls), getSdk(calls), +31 more
+
+```typescript
+29	// is recorded on the payment session, so it has no place in order history.
+30	const DRAFT_ONLY_METADATA_KEYS = ["payment_method"] as const;
+31	
+32	const stripDraftOnlyKeys = (
+33	  metadata: Record<string, unknown>
+34	): { metadata: Record<string, unknown>; stripped: boolean } => {
+35	  const cleaned = { ...metadata };
+36	  let stripped = false;
+37	  for (const key of DRAFT_ONLY_METADATA_KEYS) {
+38	    if (key in cleaned) {
+39	      delete cleaned[key];
+40	      stripped = true;
+41	    }
+42	  }
+43	  return { metadata: cleaned, stripped };
+44	};
+45	
+46	const iconByType = {
+47	  cash: Banknote,
+48	  card: CreditCard,
+49	  transfer: ArrowLeftRight,
+50	} as const;
+51	
+52	const usePaymentMethodDisplay = (selectedPaymentMethod?: PaymentMethod) => {
+53	  const { data: store } = useQueryStore();
+54	  return useMemo(() => {
+55	    const methods = getPaymentMethods(store);
+56	    const found = methods.find((m) => m.id === selectedPaymentMethod);
+57	    if (found) {
+58	      const Icon = iconByType[found.icon ?? "card"];
+59	      return { label: found.label, icon: Icon };
+60	    }
+61	    return { label: "Unknown", icon: CreditCard };
+62	  }, [store, selectedPaymentMethod]);
+63	};
+64	
+65	const useDraftOrderState = (draftOrderId?: string | null, isOpen?: boolean) => {
+66	  const [draftOrder, setDraftOrder] = useState<AdminDraftOrder | null>(null);
+67	  // Monotonic sequence so a late-resolving fetch can't overwrite a newer result
+68	  // (fetchDraftOrder is also called directly, outside the effect below).
+69	  const fetchSeqRef = useRef(0);
+70	
+71	  const fetchDraftOrder = useCallback(async () => {
+72	    const seq = ++fetchSeqRef.current;
+73	    if (!draftOrderId) {
+74	      setDraftOrder(null);
+75	      return null;
+76	    }
+77	
+78	    try {
+79	      const sdk = getSdk();
+80	      const { draft_order } = await sdk.admin.draftOrder.retrieve(
+81	        draftOrderId,
+82	        {
+83	          fields:
+84	            "*items,*summary,*region,*sales_channel,subtotal,discount_total,tax_total,total",
+85	        }
+86	      );
+87	
+88	      if (seq === fetchSeqRef.current) setDraftOrder(draft_order);
+89	      return draft_order;
+90	    } catch (error) {
+91	      void logger.error(`Failed to fetch draft order: ${safeStringify(error)}`);
+92	      if (seq === fetchSeqRef.current) setDraftOrder(null);
+93	      return null;
+94	    }
+95	  }, [draftOrderId]);
+96	
+97	  const shouldLoad = !!draftOrderId && !!isOpen;
+98	  useChange(shouldLoad, () => {
+99	    if (!shouldLoad) setDraftOrder(null);
+100	  });
+101	
+102	  useEffect(() => {
+103	    if (!draftOrderId || !isOpen) {
+104	      return;
+105	    }
+106	
+107	    let cancelled = false;
+108	    queueMicrotask(() => {
+109	      if (!cancelled) fetchDraftOrder();
+110	    });
+111	    return () => {
+112	      cancelled = true;
+113	    };
+114	  }, [isOpen, draftOrderId, fetchDraftOrder]);
+115	
+116	  return { draftOrder, fetchDraftOrder };
+117	};
+118	
+119	const useOrderCalculations = (draftOrder: AdminDraftOrder | null) => {
+120	  if (!draftOrder) {
+121	    return {
+122	      subtotal: 0,
+123	      discount: 0,
+124	      tax: 0,
+125	      total: 0,
+126	      itemCount: 0,
+127	    };
+128	  }
+129	
+130	  const subtotal = draftOrder.subtotal || 0;
+131	  const discount = draftOrder.discount_total || 0;
+132	  const tax = draftOrder.tax_total || 0;
+133	  const total = draftOrder.total || 0;
+134	  const itemCount =
+135	    draftOrder.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+136	
+137	  return { subtotal, discount, tax, total, itemCount };
+138	};
+139	
+140	const useCashPayment = (total: number, isCashType: boolean) => {
+141	  const [customerPaid, setCustomerPaid] = useState<string>("");
+142	  const [billCounts, setBillCounts] = useState<Record<number, number>>({});
+143	
+144	  const handleCashValueChange = (value: string) => {
+145	    setCustomerPaid(value);
+146	    // Reset bill counts when manually entering a value
+147	    if (value === "" || value === "0") {
+148	      setBillCounts({});
+149	    }
+150	  };
+151	
+152	  const handleQuickAmount = (amount: number, remove: boolean = false) => {
+153	    if (remove) {
+154	      // Remove one bill of this amount
+155	      setCustomerPaid((prev) => {
+156	        const currentPaid = parseFloat(prev) || 0;
+157	        return Math.max(0, currentPaid - amount).toString();
+158	      });
+159	
+160	      setBillCounts((prev) => {
+161	        const currentCount = prev[amount] || 0;
+162	        if (currentCount > 0) {
+163	          const newCount = currentCount - 1;
+164	          if (newCount <= 0) {
+165	            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+166	            const { [amount]: _, ...rest } = prev;
+167	            return rest;
+168	          }
+169	          return { ...prev, [amount]: newCount };
+170	        }
+171	        return prev;
+172	      });
+173	    } else {
+174	      // Add the amount to the current total
+175	      setCustomerPaid((prev) => {
+176	        const currentPaid = parseFloat(prev) || 0;
+177	        return (currentPaid + amount).toString();
+178	      });
+179	
+180	      // Update bill count
+181	      setBillCounts((prev) => ({
+182	        ...prev,
+183	        [amount]: (prev[amount] || 0) + 1,
+184	      }));
+185	    }
+186	  };
+187	
+188	  const handleClearBillCounts = () => {
+189	    setBillCounts({});
+190	    setCustomerPaid("");
+191	  };
+192	
+193	  const handleExactAmount = () => {
+194	    setCustomerPaid(total.toString());
+195	    setBillCounts({});
+196	  };
+197	
+198	  const change =
+199	    isCashType && customerPaid
+200	      ? (parseFloat(customerPaid) || 0) - total
+201	      : 0;
+202	
+203	  const canProcessPayment =
+204	    isCashType
+205	      ? (parseFloat(customerPaid) || 0) >= total
+206	      : true;
+207	
+208	  const resetCashState = () => {
+209	    setCustomerPaid("");
+210	    setBillCounts({});
+211	  };
+212	
+213	  return {
+214	    customerPaid,
+215	    change,
+216	    canProcessPayment,
+217	    handleCashValueChange,
+218	    handleQuickAmount,
+219	    handleClearBillCounts,
+220	    handleExactAmount,
+221	    resetCashState,
+222	    billCounts,
+223	    quickAmounts: constants.QUICK_CASH_AMOUNTS,
+224	  };
+225	};
+226	
+227	const usePaymentModal = (
+228	  draftOrderId?: string | null,
+```
+
+**`src/components/checkout/payment-dialog/pay-later-confirmation-dialog/index.tsx`** — PayLaterConfirmationDialogProps(interface)
+
+```tsx
+1	import React from "react";
+2	import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+3	import { Button } from "@/components/ui/button";
+4	import { formatPrice } from "@/utils/helpers";
+5	import { useCheckout } from "../../hooks";
+6	import { useTranslation } from "@/i18n";
+7	
+8	interface PayLaterConfirmationDialogProps {
+9	  isOpen: boolean;
+10	  onCancel: () => void;
+11	  onConfirm: () => void;
+12	  isProcessing: boolean;
+13	  total: number;
+14	}
+15	
+16	const PayLaterConfirmationDialog: React.FC<PayLaterConfirmationDialogProps> = ({
+17	  isOpen,
+18	  onCancel,
+19	  onConfirm,
+20	  isProcessing,
+21	  total,
+22	}) => {
+23	  const { currency } = useCheckout();
+24	  const { t } = useTranslation();
+25	  return (
+26	    <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
+27	      <DialogContent className="max-w-md">
+28	        <DialogTitle className="text-2xl font-semibold text-fg text-center">
+29	          {t("checkout.pay_later_confirm_title")}
+30	        </DialogTitle>
+31	
+32	        <div className="space-y-6 py-4">
+33	          <p className="text-lg text-fg-muted text-center">
+34	            {t("checkout.pay_later_confirm_message")}
+35	          </p>
+36	
+37	          <div className="bg-surface-muted border border-theme-border rounded-lg p-4">
+38	            <p className="text-center text-fg-muted font-medium">
+39	              {t("checkout.amount_due_label")}:{" "}
+40	              <span className="text-2xl font-bold text-fg">
+41	                {formatPrice(total, currency)}
+42	              </span>
+43	            </p>
+44	          </div>
+45	        </div>
+46	
+47	        <div className="flex gap-3 pt-2">
+48	          <Button
+49	            variant="outline"
+50	            onClick={onCancel}
+51	            className="flex-1 h-14 text-lg font-medium border-theme-border text-fg-muted hover:text-fg hover:bg-surface-hover"
+52	            disabled={isProcessing}
+53	          >
+54	            {t("common.cancel")}
+55	          </Button>
+56	          <Button
+57	            onClick={onConfirm}
+58	            disabled={isProcessing}
+59	            className="flex-1 h-14 text-lg font-medium"
+60	          >
+61	            {isProcessing
+62	              ? t("common.processing")
+63	              : t("checkout.deliver_pay_later_button")}
+64	          </Button>
+65	        </div>
+66	      </DialogContent>
+67	    </Dialog>
+68	  );
+69	};
+70	
+71	export default PayLaterConfirmationDialog;
+```
+
+**`src/components/order/record-payment-dialog/hooks.ts`** — useRecordPayment(function), hooks.ts(file)
+
+```typescript
+1	import { useState, useMemo, useCallback } from "react";
+2	import { AdminOrder } from "@medusajs/types";
+3	import { toast } from "sonner";
+4	import { useQueryClient } from "@tanstack/react-query";
+5	import { queryKeys } from "@/config/query";
+6	import { getSdk } from "@/config/medusa";
+7	import { useTranslation } from "@/i18n";
+8	import { useQueryStore } from "@/hooks/queries/useQueryStore";
+9	import { useOrderProcessing } from "@/hooks/order/useOrderProcessing";
+10	import { getPaymentMethods } from "@/utils/settings/store/metadata";
+11	import { getOrderPaymentProviderId } from "@/utils/pos/payment";
+12	import { handleErrorToast } from "@/utils/helpers";
+13	
+14	// "Record payment" dialog: captures an outstanding payment on an existing (pay-later)
+15	// order and completes it once both paid and fulfilled.
+16	export const useRecordPayment = (order: AdminOrder, onClose?: () => void) => {
+17	  const { t } = useTranslation();
+18	  const queryClient = useQueryClient();
+19	  const { data: store } = useQueryStore();
+20	  const { processPaymentCollection } = useOrderProcessing();
+21	
+22	  const [isProcessing, setIsProcessing] = useState(false);
+23	
+24	  const methods = useMemo(() => getPaymentMethods(store), [store]);
+25	
+26	  // Default to the method the order was rung up with (intended provider), else first enabled.
+27	  const [selectedMethod, setSelectedMethod] = useState<string>(
+28	    () => getOrderPaymentProviderId(order) ?? methods[0]?.id ?? ""
+29	  );
+30	
+31	  const total = order.summary?.accounting_total ?? order.total ?? 0;
+32	  const currency = order.currency_code;
+33	
+34	  const handleConfirm = useCallback(async () => {
+35	    if (!selectedMethod) {
+36	      handleErrorToast(t("checkout.select_payment_method"));
+37	      return;
+38	    }
+39	
+40	    setIsProcessing(true);
+41	    try {
+42	      const sdk = getSdk();
+43	
+44	      // Capture the outstanding amount with the chosen provider.
+45	      await processPaymentCollection(order, selectedMethod);
+46	
+47	      // Delivered + now paid → complete (skip if backend auto-completed; non-fatal).
+48	      const isFulfilled =
+49	        order.fulfillment_status === "fulfilled" ||
+50	        order.fulfillment_status === "shipped" ||
+51	        order.fulfillment_status === "delivered";
+52	      if (isFulfilled && order.status !== "completed") {
+53	        try {
+54	          await sdk.admin.order.complete(order.id, {});
+55	        } catch {
+56	          // non-fatal
+57	        }
+58	      }
+59	
+60	      void queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(order.id) });
+61	      void queryClient.invalidateQueries({ queryKey: queryKeys.orders.all });
+62	
+63	      toast.success(t("orders.record_payment_success"));
+64	      onClose?.();
+65	    } catch (error) {
+66	      handleErrorToast(
+67	        error instanceof Error ? error.message : t("orders.record_payment_failed")
+68	      );
+69	    } finally {
+70	      setIsProcessing(false);
+71	    }
+72	  }, [selectedMethod, order, processPaymentCollection, queryClient, onClose, t]);
+73	
+74	  return {
+75	    methods,
+76	    selectedMethod,
+77	    setSelectedMethod,
+78	    total,
+79	    currency,
+80	    isProcessing,
+81	    handleConfirm,
+82	  };
+83	};
+```
+
+**`src/hooks/queries/useQueryPaymentProviders.ts`** — fetchPaymentProviders(function), useQueryPaymentProviders(function)
+
+```typescript
+1	import { useQuery, UseQueryResult } from "@tanstack/react-query";
+2	import { AdminPaymentProvider } from "@medusajs/types";
+3	import { getSdk } from "@/config/medusa";
+4	import { queryKeys, STALE_TIME } from "@/config/query";
+5	import { handleErrorToast } from "@/utils/helpers";
+6	import { useUser } from "@/context/user";
+7	
+8	const fetchPaymentProviders = async (): Promise<AdminPaymentProvider[]> => {
+9	  try {
+10	    const sdk = getSdk();
+11	    const { payment_providers } = await sdk.admin.payment.listPaymentProviders({
+12	      limit: 100,
+13	    });
+14	    return payment_providers as AdminPaymentProvider[];
+15	  } catch (error) {
+16	    handleErrorToast(error);
+17	    return [];
+18	  }
+19	};
+20	
+21	const useQueryPaymentProviders = (): UseQueryResult<
+22	  AdminPaymentProvider[],
+23	  Error
+24	> => {
+25	  const isAuthenticated = useUser((state) => state.isAuthenticated);
+26	
+27	  return useQuery<AdminPaymentProvider[], Error>({
+28	    queryKey: queryKeys.paymentProviders,
+29	    queryFn: fetchPaymentProviders,
+30	    enabled: isAuthenticated,
+31	    staleTime: STALE_TIME.static,
+32	  });
+33	};
+34	
+35	export { useQueryPaymentProviders, fetchPaymentProviders };
+```
+
+**`src/utils/pos/payment/index.ts`** — getOrderPaymentProviderId(function), getOrderPaymentMethodLabel(function), getOrderPaymentMethodType(function)
+
+```typescript
+1	import { AdminOrder, AdminStore } from "@medusajs/types";
+2	import {
+3	  getPaymentMethodsForSettings,
+4	  getMethodType,
+5	  type PaymentMethodType,
+6	} from "@/utils/settings/store/metadata";
+7	import { toNumber } from "@/utils/pos/pricing";
+8	
+9	/**
+10	 * Returns an order's payment provider_id: payments[0] → payment_sessions[0].
+11	 * The session keeps the real provider chosen at checkout, so it's used when the
+12	 * captured payment fell back to pp_system_default via markAsPaid.
+13	 */
+14	export function getOrderPaymentProviderId(
+15	  order: AdminOrder
+16	): string | undefined {
+17	  const collection = order.payment_collections?.[0];
+18	
+19	  // Prefer an actual provider over pp_system_default (created by markAsPaid fallback).
+20	  // Check payment first, then session (which always has the real provider_id from createPaymentSession).
+21	  const paymentProviderId = collection?.payments?.[0]?.provider_id;
+22	  if (paymentProviderId && paymentProviderId !== "pp_system_default") {
+23	    return paymentProviderId;
+24	  }
+25	
+26	  const sessionProviderId = collection?.payment_sessions?.[0]?.provider_id;
+27	  if (sessionProviderId && sessionProviderId !== "pp_system_default") {
+28	    return sessionProviderId;
+29	  }
+30	
+31	  return paymentProviderId; // pp_system_default or undefined
+32	}
+33	
+34	/**
+35	 * Returns the human-readable payment method label for an order.
+36	 * Falls back to the raw provider_id if no matching configured method is found.
+37	 */
+38	export function getOrderPaymentMethodLabel(
+39	  order: AdminOrder,
+40	  store: AdminStore | null | undefined
+41	): string {
+42	  const providerId = getOrderPaymentProviderId(order);
+43	  if (!providerId) return "";
+44	
+45	  const configuredMethods = getPaymentMethodsForSettings(store);
+46	  return (
+47	    configuredMethods.find(
+48	      (m) => m.id?.toLowerCase() === providerId.toLowerCase()
+49	    )?.label ?? providerId
+50	  );
+51	}
+52	
+53	/**
+54	 * Returns the behavioral type for the payment method used in an order.
+55	 */
+56	export function getOrderPaymentMethodType(
+57	  order: AdminOrder,
+58	  store: AdminStore | null | undefined
+59	): PaymentMethodType {
+60	  return getMethodType(store, getOrderPaymentProviderId(order));
+61	}
+62	
+63	export type RefundablePayment = {
+64	  id: string;
+65	  providerId?: string;
+66	  captured: number;
+67	  refunded: number;
+68	  refundable: number;
+69	};
+70	
+71	/**
+72	 * Payments on an order that still have money left to give back.
+73	 * Medusa caps a refund at (sum of captures - sum of refunds), so an uncaptured
+74	 * payment is never refundable no matter what the order total says.
+75	 */
+76	export function getRefundablePayments(order: AdminOrder): RefundablePayment[] {
+77	  const refundable: RefundablePayment[] = [];
+78	
+79	  for (const collection of order.payment_collections ?? []) {
+80	    for (const payment of collection.payments ?? []) {
+81	      if (!payment.id) continue;
+82	
+83	      const captures = payment.captures ?? [];
+84	      const captured = captures.length
+85	        ? captures.reduce((sum, capture) => sum + toNumber(capture.amount), 0)
+86	        : payment.captured_at
+87	          ? toNumber(payment.amount)
+88	          : 0;
+89	
+90	      const refunded = (payment.refunds ?? []).reduce(
+91	        (sum, refund) => sum + toNumber(refund.amount),
+92	        0
+93	      );
+94	
+95	      // Round to cents: summing float amounts drifts, and the numpad would
+96	      // otherwise prefill something like 29.990000000000002.
+97	      const remaining = Math.max(0, Math.round((captured - refunded) * 100) / 100);
+98	      if (remaining <= 0) continue;
+99	
+100	      refundable.push({
+101	        id: payment.id,
+102	        providerId: payment.provider_id,
+103	        captured,
+104	        refunded,
+105	        refundable: remaining,
+106	      });
+107	    }
+108	  }
+109	
+110	  return refundable;
+111	}
+112	
+113	/** Total still refundable across all of an order's payments. */
+114	export function getOrderRefundableTotal(order: AdminOrder): number {
+115	  return getRefundablePayments(order).reduce(
+116	    (sum, payment) => sum + payment.refundable,
+117	    0
+118	  );
+119	}
+120	
+121	/** Amount already refunded. Medusa keeps this on the summary, not the order root. */
+122	export function getOrderRefundedTotal(order: AdminOrder): number {
+123	  return toNumber(order.summary?.refunded_total);
+124	}
+125	
+126	/**
+127	 * What the sale was worth. Refunding adds a credit line that drives `order.total`
+128	 * to 0, so the raw total misreports a refunded order as a zero-value sale.
+129	 */
+130	export function getOrderSaleTotal(order: AdminOrder): number {
+131	  const original = toNumber(order.summary?.original_order_total);
+132	  return original > 0 ? original : toNumber(order.total);
+133	}
+```
+
+**Not shown above — explore these names for their source**
+
+- src/utils/helpers/index.ts: handleErrorToast:62, printerIssueStaffHintToast:251, cashDrawerIssueStaffHintToast:260
+- src/utils/logger/index.ts: warn:32, safeStringify:43, error:37
+- src/utils/settings/store/metadata.ts: getPaymentMethods:149, getPaymentMethodsForSettings:158, getMethodType:204, PaymentMethodType:7
+- src/components/checkout/hooks.ts: useProvideCheckout:96, useCheckout:360, setPaymentMethod:78, hooks.ts:1
+- src/assets/icons/payments.tsx: Payments:1
+- src/components/ui/sidebar.tsx: useSidebar:45, toggleSidebar:40, Sidebar:152, SidebarContent:369, SidebarHeader:333, SidebarMenu:452, +4 more
+- src/utils/pos/order-processing/index.ts: processPaymentCollection:12, processFulfillment:85
+- src/components/order/record-payment-dialog/index.tsx: RecordPaymentDialog:16, index.tsx:1
+- src/components/settings/store/index.tsx: StoreSettings:35, index.tsx:1
+- src/hooks/queries/useQueryStore.ts: useQueryStore:25
+- ... and 52 more files
+
+> Some file sections were trimmed for size. For a specific symbol you still need, run another `codegraph_explore` (or `codegraph_node`) with its exact name — line-numbered source, cheaper and more complete than Read.

@@ -1,0 +1,464 @@
+**Dynamic-dispatch links among your symbols**
+(synthesized — the indirect hops grep/Read would reconstruct; the `@file:line` is the wiring site)
+
+- Wrapper → StripeWrapper   [dynamic: renders <StripeWrapper>]
+
+> Full source for these symbols is below.
+**Exploration: stripe payment provider module**
+
+Found 12 symbols across 4 files.
+
+**Blast radius — what depends on these (update/verify before editing)**
+
+- `PayPalPaymentButton` (storefront/src/modules/checkout/components/payment-button/index.tsx:192) — 1 caller in `storefront/src/modules/checkout/components/payment-button/index.tsx`; no tests found within 3 caller hops
+- `GiftCardPaymentButton` (storefront/src/modules/checkout/components/payment-button/index.tsx:66) — 1 caller in `storefront/src/modules/checkout/components/payment-button/index.tsx`; no tests found within 3 caller hops
+- `ManualTestPaymentButton` (storefront/src/modules/checkout/components/payment-button/index.tsx:262) — 1 caller in `storefront/src/modules/checkout/components/payment-button/index.tsx`; no tests found within 3 caller hops
+- `StripeWrapper` (storefront/src/modules/checkout/components/payment-wrapper/stripe-wrapper.tsx:14) — 1 caller in `storefront/src/modules/checkout/components/payment-wrapper/index.tsx`; no tests found within 3 caller hops
+
+**Source Code**
+
+> The code below is the **verbatim, current on-disk source** of these files — re-read from disk on this call and line-numbered, byte-for-byte identical to what the Read tool returns. It is NOT a summary, outline, or stale cache. Treat each block as a Read you have already performed: do not Read a file shown here.
+
+**`storefront/src/modules/checkout/components/payment-button/index.tsx`** — ErrorMessage(calls), PaymentButton(function), GiftCardPaymentButton(calls), StripePaymentButton(calls), ManualTestPaymentButton(calls), PayPalPaymentButton(calls), +8 more
+
+```tsx
+16	  "data-testid": string
+17	}
+18	
+19	const PaymentButton: React.FC<PaymentButtonProps> = ({
+20	  cart,
+21	  "data-testid": dataTestId,
+22	}) => {
+23	  const notReady =
+24	    !cart ||
+25	    !cart.shipping_address ||
+26	    !cart.billing_address ||
+27	    !cart.email ||
+28	    (cart.shipping_methods?.length ?? 0) < 1
+29	
+30	  // TODO: Add this once gift cards are implemented
+31	  // const paidByGiftcard =
+32	  //   cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
+33	
+34	  // if (paidByGiftcard) {
+35	  //   return <GiftCardPaymentButton />
+36	  // }
+37	
+38	  const paymentSession = cart.payment_collection?.payment_sessions?.[0]
+39	
+40	  switch (true) {
+41	    case isStripe(paymentSession?.provider_id):
+42	      return (
+43	        <StripePaymentButton
+44	          notReady={notReady}
+45	          cart={cart}
+46	          data-testid={dataTestId}
+47	        />
+48	      )
+49	    case isManual(paymentSession?.provider_id):
+50	      return (
+51	        <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+52	      )
+53	    case isPaypal(paymentSession?.provider_id):
+54	      return (
+55	        <PayPalPaymentButton
+56	          notReady={notReady}
+57	          cart={cart}
+58	          data-testid={dataTestId}
+59	        />
+60	      )
+61	    default:
+62	      return <Button disabled>Select a payment method</Button>
+63	  }
+64	}
+65	
+66	const GiftCardPaymentButton = () => {
+67	  const [submitting, setSubmitting] = useState(false)
+68	
+69	  const handleOrder = async () => {
+70	    setSubmitting(true)
+71	    await placeOrder()
+72	  }
+73	
+74	  return (
+75	    <Button
+76	      onClick={handleOrder}
+77	      isLoading={submitting}
+78	      data-testid="submit-order-button"
+79	    >
+80	      Place order
+81	    </Button>
+82	  )
+83	}
+84	
+85	const StripePaymentButton = ({
+86	  cart,
+87	  notReady,
+88	  "data-testid": dataTestId,
+89	}: {
+90	  cart: HttpTypes.StoreCart
+91	  notReady: boolean
+92	  "data-testid"?: string
+93	}) => {
+94	  const [submitting, setSubmitting] = useState(false)
+95	  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+96	
+97	  const onPaymentCompleted = async () => {
+98	    await placeOrder()
+99	      .catch((err) => {
+100	        setErrorMessage(err.message)
+101	      })
+102	      .finally(() => {
+103	        setSubmitting(false)
+104	      })
+105	  }
+106	
+107	  const stripe = useStripe()
+108	  const elements = useElements()
+109	  const card = elements?.getElement("card")
+110	
+111	  const session = cart.payment_collection?.payment_sessions?.find(
+112	    (s) => s.status === "pending"
+113	  )
+114	
+115	  const disabled = !stripe || !elements ? true : false
+116	
+117	  const handlePayment = async () => {
+118	    setSubmitting(true)
+119	
+120	    if (!stripe || !elements || !card || !cart) {
+121	      setSubmitting(false)
+122	      return
+123	    }
+124	
+125	    await stripe
+126	      .confirmCardPayment(session?.data.client_secret as string, {
+127	        payment_method: {
+128	          card: card,
+129	          billing_details: {
+130	            name:
+131	              cart.billing_address?.first_name +
+132	              " " +
+133	              cart.billing_address?.last_name,
+134	            address: {
+135	              city: cart.billing_address?.city ?? undefined,
+136	              country: cart.billing_address?.country_code ?? undefined,
+137	              line1: cart.billing_address?.address_1 ?? undefined,
+138	              line2: cart.billing_address?.address_2 ?? undefined,
+139	              postal_code: cart.billing_address?.postal_code ?? undefined,
+140	              state: cart.billing_address?.province ?? undefined,
+141	            },
+142	            email: cart.email,
+143	            phone: cart.billing_address?.phone ?? undefined,
+144	          },
+145	        },
+146	      })
+147	      .then(({ error, paymentIntent }) => {
+148	        if (error) {
+149	          const pi = error.payment_intent
+150	
+151	          if (
+152	            (pi && pi.status === "requires_capture") ||
+153	            (pi && pi.status === "succeeded")
+154	          ) {
+155	            onPaymentCompleted()
+156	          }
+157	
+158	          setErrorMessage(error.message || null)
+159	          return
+160	        }
+161	
+162	        if (
+163	          (paymentIntent && paymentIntent.status === "requires_capture") ||
+164	          paymentIntent.status === "succeeded"
+165	        ) {
+166	          return onPaymentCompleted()
+167	        }
+168	
+169	        return
+170	      })
+171	  }
+172	
+173	  return (
+174	    <>
+175	      <Button
+176	        disabled={disabled || notReady}
+177	        onClick={handlePayment}
+178	        size="large"
+179	        isLoading={submitting}
+180	        data-testid={dataTestId}
+181	      >
+182	        Place order
+183	      </Button>
+184	      <ErrorMessage
+185	        error={errorMessage}
+186	        data-testid="stripe-payment-error-message"
+187	      />
+188	    </>
+189	  )
+190	}
+191	
+192	const PayPalPaymentButton = ({
+193	  cart,
+194	  notReady,
+195	  "data-testid": dataTestId,
+196	}: {
+197	  cart: HttpTypes.StoreCart
+198	  notReady: boolean
+199	  "data-testid"?: string
+200	}) => {
+201	  const [submitting, setSubmitting] = useState(false)
+202	  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+203	
+204	  const onPaymentCompleted = async () => {
+205	    await placeOrder()
+206	      .catch((err) => {
+207	        setErrorMessage(err.message)
+208	      })
+209	      .finally(() => {
+210	        setSubmitting(false)
+211	      })
+212	  }
+213	
+214	  const session = cart.payment_collection?.payment_sessions?.find(
+215	    (s) => s.status === "pending"
+216	  )
+217	
+218	  const handlePayment = async (
+219	    _data: OnApproveData,
+220	    actions: OnApproveActions
+221	  ) => {
+222	    actions?.order
+223	      ?.authorize()
+224	      .then((authorization) => {
+225	        if (authorization.status !== "COMPLETED") {
+226	          setErrorMessage(`An error occurred, status: ${authorization.status}`)
+227	          return
+228	        }
+229	        onPaymentCompleted()
+230	      })
+231	      .catch(() => {
+232	        setErrorMessage(`An unknown error occurred, please try again.`)
+233	        setSubmitting(false)
+234	      })
+235	  }
+236	
+237	  const [{ isPending, isResolved }] = usePayPalScriptReducer()
+238	
+239	  if (isPending) {
+240	    return <Spinner />
+241	  }
+242	
+243	  if (isResolved) {
+244	    return (
+245	      <>
+246	        <PayPalButtons
+247	          style={{ layout: "horizontal" }}
+248	          createOrder={async () => session?.data.id as string}
+249	          onApprove={handlePayment}
+250	          disabled={notReady || submitting || isPending}
+251	          data-testid={dataTestId}
+252	        />
+253	        <ErrorMessage
+254	          error={errorMessage}
+255	          data-testid="paypal-payment-error-message"
+256	        />
+257	      </>
+258	    )
+259	  }
+260	}
+261	
+262	const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
+263	  const [submitting, setSubmitting] = useState(false)
+264	  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+265	
+266	  const onPaymentCompleted = async () => {
+267	    await placeOrder()
+268	      .catch((err) => {
+269	        setErrorMessage(err.message)
+270	      })
+271	      .finally(() => {
+272	        setSubmitting(false)
+273	      })
+274	  }
+275	
+276	  const handlePayment = () => {
+277	    setSubmitting(true)
+278	
+279	    onPaymentCompleted()
+280	  }
+281	
+282	  return (
+283	    <>
+284	      <Button
+285	        disabled={notReady}
+286	        isLoading={submitting}
+287	        onClick={handlePayment}
+288	        size="large"
+289	        data-testid="submit-order-button"
+290	      >
+291	        Place order
+292	      </Button>
+293	      <ErrorMessage
+294	        error={errorMessage}
+295	        data-testid="manual-payment-error-message"
+296	      />
+297	    </>
+298	  )
+299	}
+300	
+301	export default PaymentButton
+302	
+```
+
+**`storefront/src/lib/constants.tsx`** — paymentInfoMap(constant), isStripe(function), isManual(function), isPaypal(function), constants.tsx(file)
+
+```tsx
+1	import React from "react"
+2	import { CreditCard } from "@medusajs/icons"
+3	
+4	import Ideal from "@modules/common/icons/ideal"
+5	import Bancontact from "@modules/common/icons/bancontact"
+6	import PayPal from "@modules/common/icons/paypal"
+7	
+8	/* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
+9	export const paymentInfoMap: Record<
+10	  string,
+11	  { title: string; icon: React.JSX.Element }
+12	> = {
+13	  pp_stripe_stripe: {
+14	    title: "Credit card",
+15	    icon: <CreditCard />,
+16	  },
+17	  "pp_stripe-ideal_stripe": {
+18	    title: "iDeal",
+19	    icon: <Ideal />,
+20	  },
+21	  "pp_stripe-bancontact_stripe": {
+22	    title: "Bancontact",
+23	    icon: <Bancontact />,
+24	  },
+25	  pp_paypal_paypal: {
+26	    title: "PayPal",
+27	    icon: <PayPal />,
+28	  },
+29	  pp_system_default: {
+30	    title: "Manual Payment",
+31	    icon: <CreditCard />,
+32	  },
+33	  // Add more payment providers here
+34	}
+35	
+36	// This only checks if it is native stripe for card payments, it ignores the other stripe-based providers
+37	export const isStripe = (providerId?: string) => {
+38	  return providerId?.startsWith("pp_stripe_")
+39	}
+40	export const isPaypal = (providerId?: string) => {
+41	  return providerId?.startsWith("pp_paypal")
+42	}
+43	export const isManual = (providerId?: string) => {
+44	  return providerId?.startsWith("pp_system_default")
+45	}
+46	
+47	// Add currencies that don't need to be divided by 100
+48	export const noDivisionCurrencies = [
+49	  "krw",
+50	  "jpy",
+51	  "vnd",
+52	  "clp",
+53	  "pyg",
+54	  "xaf",
+55	  "xof",
+56	  "bif",
+57	  "djf",
+58	  "gnf",
+59	  "kmf",
+60	  "mga",
+61	  "rwf",
+62	  "xpf",
+63	  "htg",
+64	  "vuv",
+65	  "xag",
+66	  "xdr",
+67	  "xau",
+68	]
+```
+
+**`storefront/src/modules/checkout/components/payment-test/index.tsx`** — PaymentTest(function)
+
+```tsx
+1	import { Badge } from "@medusajs/ui"
+2	
+3	const PaymentTest = ({ className }: { className?: string }) => {
+4	  return (
+5	    <Badge color="orange" className={className}>
+6	      <span className="font-semibold">Attention:</span> For testing purposes
+7	      only.
+8	    </Badge>
+9	  )
+10	}
+11	
+12	export default PaymentTest
+```
+
+**`storefront/src/modules/checkout/components/payment-wrapper/stripe-wrapper.tsx`** — StripeWrapper(function)
+
+```tsx
+1	"use client"
+2	
+3	import { Stripe, StripeElementsOptions } from "@stripe/stripe-js"
+4	import { Elements } from "@stripe/react-stripe-js"
+5	import { HttpTypes } from "@medusajs/types"
+6	
+7	type StripeWrapperProps = {
+8	  paymentSession: HttpTypes.StorePaymentSession
+9	  stripeKey?: string
+10	  stripePromise: Promise<Stripe | null> | null
+11	  children: React.ReactNode
+12	}
+13	
+14	const StripeWrapper: React.FC<StripeWrapperProps> = ({
+15	  paymentSession,
+16	  stripeKey,
+17	  stripePromise,
+18	  children,
+19	}) => {
+20	  const options: StripeElementsOptions = {
+21	    clientSecret: paymentSession?.data?.client_secret as string | undefined,
+22	  }
+23	
+24	  // These used to throw during render. Since NEXT_PUBLIC_STRIPE_KEY is optional,
+25	  // an unconfigured store took down the whole checkout route rather than showing
+26	  // anything useful. Render the problem in place instead, so the rest of the
+27	  // page survives and the cause is visible.
+28	  const misconfiguration = !stripeKey
+29	    ? "Card payments are not configured for this store. Set NEXT_PUBLIC_STRIPE_KEY in the storefront environment."
+30	    : !stripePromise
+31	    ? "Card payments could not be initialised. Check that NEXT_PUBLIC_STRIPE_KEY holds a valid Stripe publishable key."
+32	    : !paymentSession?.data?.client_secret
+33	    ? "This payment session is missing its Stripe client secret, so card payments cannot start. Check that the Stripe provider is enabled on the backend."
+34	    : null
+35	
+36	  if (misconfiguration) {
+37	    console.error("StripeWrapper:", misconfiguration)
+38	
+39	    return (
+40	      <div
+41	        className="txt-medium text-ui-fg-error border border-ui-border-error rounded-rounded p-4"
+42	        data-testid="stripe-unavailable-message"
+43	      >
+44	        {misconfiguration}
+45	      </div>
+46	    )
+47	  }
+48	
+49	  return (
+50	    <Elements options={options} stripe={stripePromise}>
+51	      {children}
+52	    </Elements>
+53	  )
+54	}
+55	
+56	export default StripeWrapper
+```
+

@@ -1,0 +1,15 @@
+{
+  "wall_s": 8.651,
+  "cpu_user_s": 7.434,
+  "cpu_sys_s": 1.647,
+  "max_rss_bytes": 215113728,
+  "stdout_tail": "│\n◆  Indexed 296 files\n│\n●  2,558 nodes, 5,092 edges in 3.9s\n│\n└  Done",
+  "stderr_tail": "               14574  involuntary context switches\n           487414658  instructions retired\n           371269737  cycles elapsed\n             8839168  peak memory footprint",
+  "returncode": 0,
+  "files": 296,
+  "nodes": 2558,
+  "edges": 5092,
+  "index_size_kb": 7768,
+  "phase": "cold",
+  "round": 1
+}

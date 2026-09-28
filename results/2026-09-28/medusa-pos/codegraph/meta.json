@@ -1,0 +1,43 @@
+{
+  "date_utc": "2026-09-28T17:21:24+00:00",
+  "repo": "/Users/macbookpro/Desktop/pos/medusa-pos",
+  "repo_name": "medusa-pos",
+  "tool": "codegraph",
+  "tool_version": "1.6.0",
+  "node": "v22.12.0",
+  "rounds": 5,
+  "git_head": "",
+  "git_dirty_files": 0,
+  "df_free_kb_start": 4774004,
+  "telemetry": "off (graft telemetry disable / codegraph telemetry off, set once per machine)",
+  "df_free_kb_end": 4773624,
+  "queries": [
+    {
+      "query": "payment dialog provider_id",
+      "latency_s": [
+        2.203,
+        1.54,
+        1.912
+      ],
+      "median_s": 1.912
+    },
+    {
+      "query": "register session expected cash",
+      "latency_s": [
+        1.893,
+        1.796,
+        1.816
+      ],
+      "median_s": 1.816
+    },
+    {
+      "query": "draft order parked sales",
+      "latency_s": [
+        1.954,
+        1.619,
+        1.704
+      ],
+      "median_s": 1.704
+    }
+  ]
+}

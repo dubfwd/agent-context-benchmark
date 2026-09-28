@@ -1,0 +1,15 @@
+{
+  "wall_s": 3.19,
+  "cpu_user_s": 2.05,
+  "cpu_sys_s": 0.428,
+  "max_rss_bytes": 86953984,
+  "stdout_tail": "✓ wiring: 27 nodes (11 file, 11 function, 2 method, 1 class, 1 interface, 1 type), 44 edges, 11 cards [javascript, typescript]\n  parsed: 11 of 11 files (0 replayed from cache)\n  → /Users/macbookpro/Desktop/pos/medusa-plugins/graft\n  graft/ is git-ignored (added automatically) — a local cache; teammates run `graft build` to get their own.",
+  "stderr_tail": "                6153  involuntary context switches\n          2897310260  instructions retired\n          2435899800  cycles elapsed\n            53366784  peak memory footprint",
+  "returncode": 0,
+  "nodes": 27,
+  "edges": 44,
+  "files": 11,
+  "index_size_kb": 93,
+  "phase": "cold",
+  "round": 1
+}

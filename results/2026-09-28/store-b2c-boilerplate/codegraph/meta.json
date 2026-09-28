@@ -1,0 +1,43 @@
+{
+  "date_utc": "2026-09-28T17:26:49+00:00",
+  "repo": "/Users/macbookpro/Desktop/pos/store-b2c-boilerplate",
+  "repo_name": "store-b2c-boilerplate",
+  "tool": "codegraph",
+  "tool_version": "1.6.0",
+  "node": "v22.12.0",
+  "rounds": 5,
+  "git_head": "",
+  "git_dirty_files": 0,
+  "df_free_kb_start": 4769752,
+  "telemetry": "off (graft telemetry disable / codegraph telemetry off, set once per machine)",
+  "df_free_kb_end": 4761660,
+  "queries": [
+    {
+      "query": "stripe payment provider module",
+      "latency_s": [
+        2.078,
+        1.92,
+        2.196
+      ],
+      "median_s": 2.078
+    },
+    {
+      "query": "storefront cart provider",
+      "latency_s": [
+        1.634,
+        1.316,
+        1.975
+      ],
+      "median_s": 1.634
+    },
+    {
+      "query": "medusa config plugins",
+      "latency_s": [
+        2.322,
+        2.059,
+        1.684
+      ],
+      "median_s": 2.059
+    }
+  ]
+}

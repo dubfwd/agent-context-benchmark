@@ -1,0 +1,15 @@
+{
+  "date_utc": "2026-09-28T17:19:03+00:00",
+  "os": "macOS 13.7.8",
+  "kernel": "22.6.0",
+  "arch": "x86_64",
+  "chip": "Intel(R) Core(TM) i5-7360U CPU @ 2.30GHz",
+  "ram_bytes": "8589934592",
+  "cores": "4",
+  "df_data_volume": "Filesystem     Size   Used  Avail Capacity iused    ifree %iused  Mounted on\n/dev/disk1s1  113Gi   93Gi  4.5Gi    96% 2273886 47691960    5%   /System/Volumes/Data",
+  "node": "v22.12.0",
+  "graft": "0.20.0",
+  "codegraph": "1.6.0",
+  "node_path": "/Users/macbookpro/.nvm/versions/node/v22.12.0/bin/node",
+  "note": "npm global prefix is ~/.npm-global (house .npmrc); node via nvm v22.12.0 (host has a broken node v22.22.3 on default PATH)."
+}

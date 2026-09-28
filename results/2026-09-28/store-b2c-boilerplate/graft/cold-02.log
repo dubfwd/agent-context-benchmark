@@ -1,0 +1,15 @@
+{
+  "wall_s": 13.441,
+  "cpu_user_s": 10.852,
+  "cpu_sys_s": 1.105,
+  "max_rss_bytes": 176467968,
+  "stdout_tail": "✓ wiring: 875 nodes (402 function, 288 file, 91 type, 60 method, 22 class, 11 interface, 1 enum), 1950 edges, 288 cards [javascript, tsx, typescript]\n  parsed: 288 of 288 files (0 replayed from cache)\n  → /Users/macbookpro/Desktop/pos/store-b2c-boilerplate/graft\n  graft/ is git-ignored (added automatically) — a local cache; teammates run `graft build` to get their own.",
+  "stderr_tail": "               10639  involuntary context switches\n         21503445188  instructions retired\n         12915305442  cycles elapsed\n           137801728  peak memory footprint",
+  "returncode": 0,
+  "nodes": 875,
+  "edges": 1950,
+  "files": 288,
+  "index_size_kb": 4305,
+  "phase": "cold",
+  "round": 2
+}
