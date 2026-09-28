@@ -43,6 +43,9 @@ no graft usage; treatment runs used `graft grep` first).
   wins on cost at equal correctness.
 - **Fairness note**: B's index was pre-built (Round 2, 167 s + 75 MB) — build cost amortized to
   zero here; a first-day agent would pay it.
+- **Token deep-dive**: why the tool arms cost more despite "tokens saved" claims (loop
+  re-ingestion, strawman counterfactual, exploration invitation) and how robust the token
+  numbers are — companion analysis in [ROUND3-token-analysis.md](ROUND3-token-analysis.md).
 
 ## Answer key (grading)
 
