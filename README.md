@@ -11,12 +11,49 @@ storefront, and a Medusa backend plugin. Published raw — every round, every ma
 - **Round 1 data:** [`results/2026-09-28/`](results/2026-09-28/) — raw logs, `rounds.json`,
   `summary.md`
 
-## Why
+## Why — the problem, the purpose, the return
 
-Tools like Graft and CodeGraph claim to make coding agents faster/cheaper via a local code
-graph. Most published numbers are single-run screenshots. This benchmark runs **≥5 cold rounds +
-warm + mutation + query latency** per (repo × tool), publishes all raw rounds, and states claims
-only where the METHODOLOGY's statistical bar is met.
+**The problem.** Tools like Graft and CodeGraph market themselves as context layers that make
+coding agents faster and cheaper via a local code graph. Most published numbers are single-run
+screenshots, measured against a strawman. Meanwhile this workspace's real backlog was a
+whole-surface verification of a payments product — four acquirer APIs, a Medusa backend, a POS
+app — exactly the kind of work these tools claim to accelerate.
+
+**The purpose.** Measure the tools on real work instead of vibes, and let the measurements
+decide adoption: (1) indexing mechanics with ≥5 cold rounds per (repo × tool) and a statistical
+bar before any claim; (2) field tests on actual workspace tasks; (3) the verification mission
+itself executed with the tools in the loop, then a controlled A/B — the same task run by
+identical agents with grep only vs. with each graph tool available, graded against a published
+answer key.
+
+**The return.**
+
+- **Design findings before code exists.** The verification mission re-audited ~30 documented
+  claims (they held) and surfaced 7 genuinely new ones that shaped the payments plugin: the
+  core's webhook pipeline is blind to failures (terminal declines must reach the app by
+  polling, never by webhook), payment sessions never expire in the core, partial
+  capture/refund exists in the HTTP contract, a synchronous order-authorize endpoint exists,
+  and the POS app's receipt generator is card-blind (no NSU, brand, or installments fields) —
+  all folded into the workspace docs the same day.
+- **A corpora verdict.** Scraped portal markdown is invisible to code-graph tools (both parsed
+  1/178 files) — ripgrep stays the research tool there; and a silently empty SumUp scrape was
+  caught in the process.
+- **Two documented beliefs corrected against sources**: a severity overestimate in the
+  workspace docs (a loss that was never happening) and a mislabeled source clone (cited as
+  v2.19.0, actually develop/2.21.1 — provenance relabeled across 9 documents).
+- **A decision-grade tool verdict.** On the controlled task, correctness was a three-way tie
+  (10/10 for grep-only, +Graft, +CodeGraph) while the tool arms cost **+27% / +37% tokens** —
+  so the reasoned outcome is **non-adoption** as a default context layer, with one index kept
+  exactly where it pays (hard, wide lookups over a large code corpus) and grep/ripgrep kept as
+  the workhorse.
+- **A cost model agents can act on.** "Tokens saved per call" is measured against whole-file
+  reads, not against grep — and net savings, not per-call savings, is the number that matters
+  ([ROUND3-token-analysis.md](results/2026-09-28/ROUND3-token-analysis.md)).
+- **A reusable protocol.** The next tool version — or the next competitor — can be scored with
+  the same rounds, the same grading, and the same honesty rules.
+
+**Honest limits.** One operator, one machine, one day; the controlled piece is n = 2 per arm on
+one task. Everything is published raw so anyone can refute it.
 
 ## Round 1 (2026-09-28) — Graft 0.20.0 vs CodeGraph 1.6.0
 
